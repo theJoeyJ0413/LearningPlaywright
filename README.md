@@ -1,4 +1,6 @@
 
+🔗 https://playwright.dev/docs/intro
+
 ### DAY 1
 1. 安装官方脚手架
     ```
@@ -36,3 +38,41 @@
     - **`test(name, fn)`** = 一个用例 = 一个独立场景
     - **自动等待**：`click()` 前自动等元素可交互，断言自动重试到超时
     - **用例之间天然隔离`page` fixture**：每个用例一份全新浏览器上下文（相当于全新无痕窗口）
+
+### DAY 2
+1. 定位器：优先面向用户定位
+    优先级：`getByRole > getByLabel > getByPlaceholder > getByText > getByAltText > getByTestId`
+
+2. 常用动作
+    - `goto`
+    - `fill`、`press`、`click`、`check`、`hover`等
+
+    > 不需要写显式等待。
+    > **可操作性检查（actionability check）**：点击前自动等元素存在、可见、稳定、可接收事件、未被遮挡
+
+3. 断言
+    1. `web-first`断言：自动重试直到满足或超时
+        `await expect(page).toHaveTitle(/Playwright/);`
+        `await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();`
+        `await expect(page.getByTestId('todo-title')).toHaveText(['学习定位器']);`
+    2. 普通断言：同步、只查一次。适用于校验已拿到的普通值
+        `expect(1 + 1).toBe(2)`
+
+4. Codegen 录制
+    `npx playwright codegen demo.playwright.dev/todomvc`
+    - 被测对象：`https://demo.playwright.dev/todomvc`
+
+5. 调试
+    > 先看报错的 expected / received → 再开 UI Mode 定位到那一步 → 最后才怀疑环境
+    1. UI Mode
+    `npx playwright test --ui` 看每一步执行
+    2. Inspector
+    `npx playwright test --debug` 单步执行，边看 DOM 边改定位器
+    3. Trace
+    `npx playwright test --trace on-first-retry` CI 失败后复盘：动作前后 DOM 快照、网络、Console
+
+其他：
+- 输入的几种选择
+    1. `fill(test)`清空+设值
+    2. `pressSequentially(text)`逐字符（keydown-input-keyup），追加文本
+    3. `clear()` 只清空
