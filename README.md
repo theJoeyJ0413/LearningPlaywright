@@ -58,15 +58,38 @@
 
 3. 断言
    1. `web-first`断言：自动重试直到满足或超时
-      `await expect(page).toHaveTitle(/Playwright/);`
-      `await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();`
-      `await expect(page.getByTestId('todo-title')).toHaveText(['学习定位器']);`
+      ```ts
+      await expect(page).toHaveTitle(/Playwright/);
+      await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
+      await expect(page.getByTestId('todo-title')).toHaveText(['学习定位器']);
+      ```
    2. 普通断言：同步、只查一次。适用于校验已拿到的普通值
       `expect(1 + 1).toBe(2)`
 
 4. Codegen 录制
    `npx playwright codegen demo.playwright.dev/todomvc`
    - 被测对象：`https://demo.playwright.dev/todomvc`
+   - 记录页面操作，并形成测试代码，但是不能直接使用，要结合项目的架构风格和业务规则进行调整
+   - 【记住登录状态】auth.json里是明文，要加上后续处理
+      ```bash
+      # 第一次：手动登录，关窗口时保存
+      npx playwright codegen https://your-app.com --save-storage=auth.json
+      # 之后：直接以登录态开始录
+      npx playwright codegen https://your-app.com --load-storage=auth.json
+      ```
+   - 【移动端/深色模式/指定时区】
+      ```bash
+      npx playwright codegen --device="iPhone 13" https://demo.playwright.dev/todomvc
+      npx playwright codegen --color-scheme=dark https://playwright.dev
+      npx playwright codegen --timezone="Europe/Rome" --lang="it-IT" bing.com/maps
+      ```
+   - 【指定编程语言并保存】
+      ```bash
+      # 生成 TS 测试文件
+      npx playwright codegen -o tests/todo.spec.ts https://demo.playwright.dev/todomvc
+      # 生成 Python（pytest 风格）
+      npx playwright codegen --target=python-pytest -o test_todo.py https://demo.playwright.dev/todomvc
+      ```
 
 5. 调试
    > 先看报错的 expected / received → 再开 UI Mode 定位到那一步 → 最后才怀疑环境
@@ -84,7 +107,7 @@
   2. `pressSequentially(text)`逐字符（keydown-input-keyup），追加文本
   3. `clear()` 只清空
 
-### DAY 3: 配置+工程化+ CI
+### DAY 3: 配置+工程化
 
 1. 理解 `playwright.config.ts` 配置
    🔗：https://playwright.dev/docs/test-configuration
@@ -113,3 +136,47 @@
 3. `Page Object Model`：页面结构变化只改一个文件
 
     在页面文件中定义：元素定位信息、页面基本操作方法、部分可选的断言等，在测试中直接将操作串起来
+
+### DAY 4: CI、MCP + CLI + Test Agents
+
+1. 接入 GitHub Actions
+   
+   在`npm init playwright@latest`时，默认了`yes`，所以项目里已有`.github/workflows/playwright.yml`
+
+   触发时机：往`main/master`分支上`push/pull`代码时
+
+   核心：装依赖 -> 装浏览器 -> 跑测试 -> 传报告
+
+2. MCP + CLI
+
+   【MCP】
+   - 在 VSCode 里配置 playwright MCP
+   - 发送对话后，VSCode 会按照 MCP 协议调用对应的 Playwright MCP Server，并真正去启动和操作控制浏览器
+      - 这里 VSCode 作为 MCP Client；MCP Server是提供服务的那一端
+   - **快照snapshot**：可访问性树。其中，`ref`是编号，元素用`“角色+名字”`描述
+      ```
+      - listitem [ref=f1e37]:
+            - generic [ref=f1e38]:
+               - checkbox "Toggle Todo" [ref=f1e39]
+               - generic [ref=f1e40]: 跑步
+               - text: ×
+      ```
+   - 配置时要注意能力开关`--caps=testing`，里面包含测试要使用的工具，例如`browser_generate_locator、browser_verify_*`等  
+
+   【CLI】
+   ```bash
+   npm install -g @playwright/cli@latest
+   playwright-cli --help
+
+   playwright-cli install --skills=claude
+   playwright-cli install --skills=agents
+   playwright-cli install --skills=claude -g
+
+   playwright-cli open https://demo.playwright.dev/todomvc --headed
+   playwright-cli type "买牛奶"
+   playwright-cli press Enter
+   playwright-cli check e21
+   playwright-cli find "Completed"
+   playwright-cli screenshot
+   playwright-cli close
+   ```
